@@ -5162,7 +5162,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         RenderFrame(frame_bb.Min, frame_bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
     }
 
-    const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + inner_size.x, frame_bb.Min.y + inner_size.y); // Not using frame_bb.Max because we have adjusted size
+    const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + inner_size.x, frame_bb.Min.y + inner_size.y); // Not using frame_bb.LocalMax because we have adjusted size
     ImVec2 draw_pos = is_multiline ? draw_window->DC.CursorPos : frame_bb.Min + style.FramePadding;
     ImVec2 text_size(0.0f, 0.0f);
 
@@ -6995,7 +6995,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         bb.Max.x += (spacing_x - spacing_L);
         bb.Max.y += (spacing_y - spacing_U);
     }
-    //if (g.IO.KeyCtrl) { GetForegroundDrawList()->AddRect(bb.Min, bb.Max, IM_COL32(0, 255, 0, 255)); }
+    //if (g.IO.KeyCtrl) { GetForegroundDrawList()->AddRect(bb.LocalMin, bb.LocalMax, IM_COL32(0, 255, 0, 255)); }
 
     const bool disabled_item = (flags & ImGuiSelectableFlags_Disabled) != 0;
     const ImGuiItemFlags extra_item_flags = disabled_item ? (ImGuiItemFlags)ImGuiItemFlags_Disabled : ImGuiItemFlags_None;
@@ -7459,9 +7459,9 @@ bool ImGui::BeginBoxSelect(const ImRect& scope_rect, ImGuiWindow* window, ImGuiI
             bs->UnclipRect.Add(bs->BoxSelectRectCurr);
         }
 
-    //GetForegroundDrawList()->AddRect(bs->UnclipRect.Min, bs->UnclipRect.Max, IM_COL32(255,0,0,200), 0.0f, 0, 3.0f);
-    //GetForegroundDrawList()->AddRect(bs->BoxSelectRectPrev.Min, bs->BoxSelectRectPrev.Max, IM_COL32(255,0,0,200), 0.0f, 0, 3.0f);
-    //GetForegroundDrawList()->AddRect(bs->BoxSelectRectCurr.Min, bs->BoxSelectRectCurr.Max, IM_COL32(0,255,0,200), 0.0f, 0, 1.0f);
+    //GetForegroundDrawList()->AddRect(bs->UnclipRect.LocalMin, bs->UnclipRect.LocalMax, IM_COL32(255,0,0,200), 0.0f, 0, 3.0f);
+    //GetForegroundDrawList()->AddRect(bs->BoxSelectRectPrev.LocalMin, bs->BoxSelectRectPrev.LocalMax, IM_COL32(255,0,0,200), 0.0f, 0, 3.0f);
+    //GetForegroundDrawList()->AddRect(bs->BoxSelectRectCurr.LocalMin, bs->BoxSelectRectCurr.LocalMax, IM_COL32(0,255,0,200), 0.0f, 0, 1.0f);
     return true;
 }
 
@@ -7486,7 +7486,7 @@ void ImGui::EndBoxSelect(const ImRect& scope_rect, ImGuiMultiSelectFlags ms_flag
     {
         ImRect scroll_r = scope_rect;
         scroll_r.Expand(-g.FontSize);
-        //GetForegroundDrawList()->AddRect(scroll_r.Min, scroll_r.Max, IM_COL32(0, 255, 0, 255));
+        //GetForegroundDrawList()->AddRect(scroll_r.LocalMin, scroll_r.LocalMax, IM_COL32(0, 255, 0, 255));
         if (!scroll_r.Contains(g.IO.MousePos))
             BoxSelectScrollWithMouseDrag(bs, window, scroll_r);
     }
@@ -8666,7 +8666,7 @@ bool ImGui::BeginMenuBar()
     PushID("##MenuBar");
 
     // We don't clip with current window clipping rectangle as it is already set to the area below. However we clip with window full rect.
-    // We remove 1 worth of rounding to Max.x to that text in long menus and small windows don't tend to display over the lower-right rounded area, which looks particularly glitchy.
+    // We remove 1 worth of rounding to LocalMax.x to that text in long menus and small windows don't tend to display over the lower-right rounded area, which looks particularly glitchy.
     const float border_top = ImMax(window->WindowBorderSize * 0.5f - window->TitleBarHeight, 0.0f);
     ImRect bar_rect = window->MenuBarRect();
     ImRect clip_rect(IM_ROUND(bar_rect.Min.x + window->WindowBorderSize * 0.5f), IM_ROUND(bar_rect.Min.y + border_top), IM_ROUND(ImMax(bar_rect.Min.x, bar_rect.Max.x - ImMax(window->WindowRounding, window->WindowBorderSize * 0.5f))), IM_ROUND(bar_rect.Max.y));
@@ -9461,7 +9461,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     // Tab List Popup (will alter tab_bar->BarRect and therefore the available width!)
     const bool tab_list_popup_button = (tab_bar->Flags & ImGuiTabBarFlags_TabListPopupButton) != 0;
     if (tab_list_popup_button)
-        if (ImGuiTabItem* tab_to_select = TabBarTabListPopupButton(tab_bar)) // NB: Will alter BarRect.Min.x!
+        if (ImGuiTabItem* tab_to_select = TabBarTabListPopupButton(tab_bar)) // NB: Will alter BarRect.LocalMin.x!
             scroll_to_tab_id = tab_bar->SelectedTabId = tab_to_select->ID;
 
     // Leading/Trailing tabs will be shrink only if central one aren't visible anymore, so layout the shrink data as: leading, trailing, central
@@ -9511,7 +9511,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         tab_bar->WidthAllTabsIdeal += sections[section_n].Width + sections[section_n].Spacing;
 
     // Horizontal scrolling buttons
-    // (note that TabBarScrollButtons() will alter BarRect.Max.x)
+    // (note that TabBarScrollButtons() will alter BarRect.LocalMax.x)
     if ((tab_bar->WidthAllTabsIdeal > tab_bar->BarRect.GetWidth() && tab_bar->Tabs.Size > 1) && !(tab_bar->Flags & ImGuiTabBarFlags_NoTabListScrollingButtons) && (tab_bar->Flags & ImGuiTabBarFlags_FittingPolicyScroll))
         if (ImGuiTabItem* scroll_and_select_tab = TabBarScrollingButtons(tab_bar))
         {
@@ -9808,7 +9808,7 @@ void ImGui::TabBarQueueReorderFromMousePos(ImGuiTabBar* tab_bar, ImGuiTabItem* s
         // Include spacing after tab, so when mouse cursor is between tabs we would not continue checking further tabs that are not hovered.
         const float x1 = bar_offset + dst_tab->Offset - g.Style.ItemInnerSpacing.x;
         const float x2 = bar_offset + dst_tab->Offset + dst_tab->Width + g.Style.ItemInnerSpacing.x;
-        //GetForegroundDrawList()->AddRect(ImVec2(x1, tab_bar->BarRect.Min.y), ImVec2(x2, tab_bar->BarRect.Max.y), IM_COL32(255, 0, 0, 255));
+        //GetForegroundDrawList()->AddRect(ImVec2(x1, tab_bar->BarRect.LocalMin.y), ImVec2(x2, tab_bar->BarRect.LocalMax.y), IM_COL32(255, 0, 0, 255));
         if ((dir < 0 && mouse_pos.x > x1) || (dir > 0 && mouse_pos.x < x2))
             break;
     }
@@ -9857,7 +9857,7 @@ static ImGuiTabItem* ImGui::TabBarScrollingButtons(ImGuiTabBar* tab_bar)
     const float scrolling_buttons_width = arrow_button_size.x * 2.0f;
 
     const ImVec2 backup_cursor_pos = window->DC.CursorPos;
-    //window->DrawList->AddRect(ImVec2(tab_bar->BarRect.Max.x - scrolling_buttons_width, tab_bar->BarRect.Min.y), ImVec2(tab_bar->BarRect.Max.x, tab_bar->BarRect.Max.y), IM_COL32(255,0,0,255));
+    //window->DrawList->AddRect(ImVec2(tab_bar->BarRect.LocalMax.x - scrolling_buttons_width, tab_bar->BarRect.LocalMin.y), ImVec2(tab_bar->BarRect.LocalMax.x, tab_bar->BarRect.LocalMax.y), IM_COL32(255,0,0,255));
 
     int select_dir = 0;
     ImVec4 arrow_col = g.Style.Colors[ImGuiCol_Text];
@@ -10375,7 +10375,7 @@ void ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
     if (out_text_clipped)
     {
         *out_text_clipped = (text_ellipsis_clip_bb.Min.x + label_size.x) > text_pixel_clip_bb.Max.x;
-        //draw_list->AddCircle(text_ellipsis_clip_bb.Min, 3.0f, *out_text_clipped ? IM_COL32(255, 0, 0, 255) : IM_COL32(0, 255, 0, 255));
+        //draw_list->AddCircle(text_ellipsis_clip_bb.LocalMin, 3.0f, *out_text_clipped ? IM_COL32(255, 0, 0, 255) : IM_COL32(0, 255, 0, 255));
     }
 
     const float button_sz = g.FontSize;

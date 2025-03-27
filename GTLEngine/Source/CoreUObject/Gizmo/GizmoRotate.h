@@ -14,8 +14,8 @@ public:
 	virtual void Destroy() override;
 
 	void OnClick(int mx, int my) override;
-	void OnDragTick(FVector2 PointNDC, FVector2 DeltaNDC) override;
+	void OnDragTick(FVector2 PosNDC, FVector2 DeltaNDC, const FMatrix& ViewProj, FVector Axis, AActor* Target) override;
 	void OnRelease(int mx, int my) override;
 
-	virtual bool Intersects(FRay ray, float& hitDistance) override;
+	virtual bool Intersects(FRay ray, FVector& Axis, float& hitDistance) override;
 };

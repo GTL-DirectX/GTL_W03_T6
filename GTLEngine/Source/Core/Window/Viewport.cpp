@@ -177,6 +177,7 @@ void FViewport::ProcessCameraMovement(float DeltaTime)
 	FVector RightDirection = CameraRotation.TransformRotVecToMatrix(FVector::RightVector);
 	FVector UpDirection = CameraRotation.TransformRotVecToMatrix(FVector::UpVector);
 
+
 	UInputManager* InputManager = UEngine::GetEngine().GetInputManager();
 
 	if (InputManager->GetKey('W'))
@@ -246,6 +247,14 @@ FRay FViewport::GetRayOnWorld(int InClientMouseX, int InClientMouseY)
 	WorldRayFar /= WorldRayFar.W;
 
 	return FRay(WorldRayNear.xyz(), (WorldRayFar - WorldRayNear).xyz());
+}
+
+FVector2 FViewport::GetCursorOnNDC(int InClientMouseX, int InClientMouseY)
+{
+	float NDCMouseX = (InClientMouseX - Viewport.TopLeftX) / (float)Viewport.Width * 2 - 1;
+	float NDCMouseY = (InClientMouseY - Viewport.TopLeftY) / (float)Viewport.Height * -2 + 1;
+
+	return FVector2(NDCMouseX, NDCMouseX);
 }
 
 bool FViewport::Contains(int x, int y) const

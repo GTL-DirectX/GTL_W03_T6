@@ -30,7 +30,7 @@ void FGizmoManager::Init()
 	GizmoTranslate->Init();
 	GizmoRotate->Init();
 	GizmoScale->Init();
-	GizmoOnDrag = GizmoScale;
+	CurrentGizmo = GizmoScale;
 }
 
 void FGizmoManager::Tick(float DeltaTime)
@@ -40,29 +40,29 @@ void FGizmoManager::Tick(float DeltaTime)
 	{
 		GizmoMode = static_cast<EGizmoModeIndex>((static_cast<int>(GizmoMode) + 1) % 3);
 	}
-	if (GizmoOnDrag)
+	if (CurrentGizmo)
 	{
 		switch (GizmoMode)
 		{
 		case EGizmoModeIndex::GMI_GizmoTranslate:
-			GizmoOnDrag = GizmoTranslate;
+			CurrentGizmo = GizmoTranslate;
 			break;
 		case EGizmoModeIndex::GMI_GizmoRotate:
-			GizmoOnDrag = GizmoRotate;
+			CurrentGizmo = GizmoRotate;
 			break;
 		case EGizmoModeIndex::GMI_GizmoScale:
-			GizmoOnDrag = GizmoScale;
+			CurrentGizmo = GizmoScale;
 			break;
 		default:
 			break;
 		}
 	}
 
-	if (GizmoOnDrag && SelectedActor)
+	if (CurrentGizmo && SelectedActor)
 	{
-		GizmoOnDrag->SetActorLocation(SelectedActor->GetActorLocation());
-		GizmoOnDrag->SetActorRotation(SelectedActor->GetActorRotation());
-		GizmoOnDrag->SetActorScale(SelectedActor->GetActorScale());
+		CurrentGizmo->SetActorLocation(SelectedActor->GetActorLocation());
+		CurrentGizmo->SetActorRotation(SelectedActor->GetActorRotation());
+		CurrentGizmo->SetActorScale(SelectedActor->GetActorScale());
 	}
 
 }
@@ -72,9 +72,8 @@ void FGizmoManager::Destroy()
 }
 
 // TODO: it should be in Inputmanager
-void FGizmoManager::ProcessPicking(FRay Ray) {
+AActor* FGizmoManager::CastRayAndPick(FRay Ray) {
 	UInputManager* InputManager = UEngine::GetEngine().GetInputManager();
-
 
 	// 좌클릭 했을 경우 : actor를 클릭했을 경우 -> 선택된 액터 변경(같으면 그냥 유지됨).
 	// 만약 gizmo를 클릭했을경우(z 무시함) -> gizmo 를 활성화???
@@ -104,26 +103,31 @@ void FGizmoManager::ProcessPicking(FRay Ray) {
 	if (InputManager->GetMouseDown(UInputManager::EMouseButton::LEFT)) {
 		// 기즈모가 떠있어야 할수있으니까.
 		bool isGizmoIntersect = false;
-		if (GizmoOnDrag)
+		if (CurrentGizmo)
 		{
 			float DistancePlaceHolder = FLT_MAX;
+
 			switch (GizmoMode)
 			{
 			case EGizmoModeIndex::GMI_GizmoTranslate:
 				//isGizmoIntersect = GizmoTranslate->Intersects(Ray, DistanceNearestGizmo);
-				isGizmoIntersect = GizmoTranslate->Intersects(Ray, DistancePlaceHolder);
+				isGizmoIntersect = GizmoTranslate->Intersects(Ray, AxisOnDrag, DistancePlaceHolder);
 				break;
 			case EGizmoModeIndex::GMI_GizmoRotate:
-				isGizmoIntersect = GizmoRotate->Intersects(Ray, DistancePlaceHolder);
+				isGizmoIntersect = GizmoRotate->Intersects(Ray, AxisOnDrag, DistancePlaceHolder);
 				break;
 			case EGizmoModeIndex::GMI_GizmoScale:
-				isGizmoIntersect = GizmoScale->Intersects(Ray, DistancePlaceHolder);
+				isGizmoIntersect = GizmoScale->Intersects(Ray, AxisOnDrag, DistancePlaceHolder);
 				break;
 			default:
+				AxisOnDrag = FVector(0, 0, 0);
 				break;
 			}
 		}
-		// 기즈모가 선택되지 않았을때
+		if(isGizmoIntersect)
+			IsGizmoDragged = true;
+
+		// 기즈모가 선택되지 않았을때 -> 월드에 레이를 쏨
 		if (!isGizmoIntersect)
 		{
 			// 가장 앞에 있는 actor를 검출.
@@ -146,20 +150,20 @@ void FGizmoManager::ProcessPicking(FRay Ray) {
 			// 액터가 선택되었을때.
 			if (ActorOnRay)
 			{
-				SelectedActor->IsSelected = false;
+				//SelectedActor->IsSelected = false;
 				SelectedActor = ActorOnRay;
-				SelectedActor->IsSelected = true;
+				//SelectedActor->IsSelected = true;
 
 				switch (GizmoMode)
 				{
 				case EGizmoModeIndex::GMI_GizmoTranslate:
-					GizmoOnDrag = GizmoTranslate;
+					CurrentGizmo = GizmoTranslate;
 					break;
 				case EGizmoModeIndex::GMI_GizmoRotate:
-					GizmoOnDrag = GizmoRotate;
+					CurrentGizmo = GizmoRotate;
 					break;
 				case EGizmoModeIndex::GMI_GizmoScale:
-					GizmoOnDrag = GizmoScale;
+					CurrentGizmo = GizmoScale;
 					break;
 				default:
 					break;
@@ -168,38 +172,91 @@ void FGizmoManager::ProcessPicking(FRay Ray) {
 			// 액터가 선택되지 않았을 때.
 			else
 			{
-				if (SelectedActor) {
-					SelectedActor->IsSelected = false;
-					SelectedActor = nullptr;
-					GizmoOnDrag = nullptr;
-				}
+				//SelectedActor->IsSelected = false;
+				SelectedActor = nullptr;
+				CurrentGizmo = nullptr;
 			}
+			return SelectedActor;
 		}
 		// 기즈모가 선택되었을때는 아무것도 안함
-		else {}
-	}
-	
-	// 마우스를 뗐을때 
-	/*else if (InputManager->GetMouseUp(UInputManager::EMouseButton::LEFT)) {
-		GizmoOnDrag = nullptr;
-	}*/
-	
-	// 누르고 있을경우
-	else if (InputManager->GetMouseButton(UInputManager::EMouseButton::LEFT)) {
-		if (GizmoOnDrag)
-		{
+		else {
 			switch (GizmoMode)
 			{
 			case EGizmoModeIndex::GMI_GizmoTranslate:
-				//GizmoTranslate->OnDragTick();
+				CurrentGizmo = GizmoTranslate;
 				break;
 			case EGizmoModeIndex::GMI_GizmoRotate:
-				//GizmoRotate->OnDragTick();
+				CurrentGizmo = GizmoRotate;
 				break;
 			case EGizmoModeIndex::GMI_GizmoScale:
-				//GizmoScale->OnDragTick();
+				CurrentGizmo = GizmoScale;
 				break;
 			default:
+				break;
+			}
+		}
+	}
+	//
+	// 마우스를 뗐을때 
+	if (InputManager->GetMouseUp(UInputManager::EMouseButton::LEFT)) {
+		IsGizmoDragged = false;
+		AxisOnDrag = FVector(0, 0, 0);
+	}
+	
+	//// 누르고 있을경우
+	//if (InputManager->GetMouseButton(UInputManager::EMouseButton::LEFT) && SelectedActor) {
+	//	if (CurrentGizmo)
+	//	{
+	//		switch (GizmoMode)
+	//		{
+	//		case EGizmoModeIndex::GMI_GizmoTranslate:
+	//			GizmoTranslate->OnDragTick(AxisOnDrag, SelectedActor);
+	//			break;
+	//		case EGizmoModeIndex::GMI_GizmoRotate:
+	//			GizmoRotate->OnDragTick(AxisOnDrag, SelectedActor);
+	//			break;
+	//		case EGizmoModeIndex::GMI_GizmoScale:
+	//			GizmoScale->OnDragTick(AxisOnDrag, SelectedActor);
+	//			break;
+	//		default:
+	//			break;
+	//		}
+	//	}
+	//}
+
+	return SelectedActor;
+}
+
+void FGizmoManager::OnDrag(FVector2 PosNDC, FVector2 DeltaNDC, const FMatrix& ViewProj)
+{
+	if (!IsGizmoDragged) return;
+	UInputManager* InputManager = UEngine::GetEngine().GetInputManager();
+	// 누르고 있을경우
+	if (InputManager->GetMouseButton(UInputManager::EMouseButton::LEFT) && SelectedActor)
+	{
+
+		//UE_LOG(LogTemp, Display, TEXT("1111111111111111"));
+
+		if (CurrentGizmo && IsGizmoDragged)
+		{
+			//UE_LOG(LogTemp, Display, TEXT("22222222222222222222"));
+
+			switch (GizmoMode)
+			{
+			case EGizmoModeIndex::GMI_GizmoTranslate:
+				GizmoTranslate->OnDragTick(PosNDC, DeltaNDC, ViewProj, AxisOnDrag, SelectedActor);
+				//UE_LOG(LogTemp, Display, TEXT("333333333333333"));
+				break;
+			case EGizmoModeIndex::GMI_GizmoRotate:
+				//UE_LOG(LogTemp, Display, TEXT("444444444444444444"));
+				GizmoRotate-> OnDragTick(PosNDC, DeltaNDC, ViewProj, AxisOnDrag, SelectedActor);
+				break;
+			case EGizmoModeIndex::GMI_GizmoScale:
+				//UE_LOG(LogTemp, Display, TEXT("555555555555555555"));
+				GizmoScale->OnDragTick(PosNDC, DeltaNDC, ViewProj, AxisOnDrag, SelectedActor);
+				break;
+			default:
+
 				break;
 			}
 		}
@@ -209,7 +266,7 @@ void FGizmoManager::ProcessPicking(FRay Ray) {
 
 void FGizmoManager::ClearSelected() {
 	if (SelectedActor) {
-		SelectedActor->IsSelected = false;
+		//SelectedActor->IsSelected = false;
 		SelectedActor = nullptr;
 	}
 }

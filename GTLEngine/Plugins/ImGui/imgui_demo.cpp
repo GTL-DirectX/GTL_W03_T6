@@ -4270,7 +4270,7 @@ static void DemoWindowLayout()
         // - Using SetCursorPos() to position child window (the child window is an item from the POV of parent window)
         //   You can also call SetNextWindowPos() to position the child window. The parent window will effectively
         //   layout from this position.
-        // - Using ImGui::GetItemRectMin/Max() to query the "item" state (because the child window is an item from
+        // - Using ImGui::GetItemRectMin/LocalMax() to query the "item" state (because the child window is an item from
         //   the POV of the parent window). See 'Demo->Querying Status (Edited/Active/Hovered etc.)' for details.
         {
             static int offset_x = 0;
@@ -8373,7 +8373,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             ImGui::DragFloat("Curve Tessellation Tolerance", &style.CurveTessellationTol, 0.02f, 0.10f, 10.0f, "%.2f");
             if (style.CurveTessellationTol < 0.10f) style.CurveTessellationTol = 0.10f;
 
-            // When editing the "Circle Segment Max Error" value, draw a preview of its effect on auto-tessellated circles.
+            // When editing the "Circle Segment LocalMax Error" value, draw a preview of its effect on auto-tessellated circles.
             ImGui::DragFloat("Circle Tessellation Max Error", &style.CircleTessellationMaxError , 0.005f, 0.10f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
             const bool show_samples = ImGui::IsItemActive();
             if (show_samples)

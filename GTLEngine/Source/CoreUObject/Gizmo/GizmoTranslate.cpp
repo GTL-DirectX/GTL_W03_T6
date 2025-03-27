@@ -13,7 +13,6 @@ void AGizmoTranslate::Init()
 	GizmoTranslateMeshX->SetRelativeRotation(FRotator(0, 0, 0));
 	GizmoTranslateMeshX->SetupAttachment(RootComponent);
 
-
 	UStaticMeshComponent* GizmoTranslateMeshY = AddComponent<UStaticMeshComponent>(this);
 	GizmoTranslateMeshY->SetStaticMesh(FObjManager::LoadObjStaticMesh(TEXT("Resource/Shape/GizmoTranslate.obj")));
 	GizmoTranslateMeshY->SetRelativeRotation(FRotator(0, 90, 0));
@@ -23,6 +22,18 @@ void AGizmoTranslate::Init()
 	GizmoTranslateMeshZ->SetStaticMesh(FObjManager::LoadObjStaticMesh(TEXT("Resource/Shape/GizmoTranslate.obj")));
 	GizmoTranslateMeshZ->SetRelativeRotation(FRotator(90, 0, 0));
 	GizmoTranslateMeshZ->SetupAttachment(RootComponent);
+
+
+	//X축 기준
+	OriginalAABB[0] = FVector(LocalMin.X, LocalMin.Y, LocalMin.Z);
+	OriginalAABB[1] = FVector(LocalMax.X, LocalMin.Y, LocalMin.Z);
+	OriginalAABB[2] = FVector(LocalMin.X, LocalMax.Y, LocalMin.Z);
+	OriginalAABB[3] = FVector(LocalMax.X, LocalMax.Y, LocalMin.Z);
+	OriginalAABB[4] = FVector(LocalMin.X, LocalMin.Y, LocalMax.Z);
+	OriginalAABB[5] = FVector(LocalMax.X, LocalMin.Y, LocalMax.Z);
+	OriginalAABB[6] = FVector(LocalMin.X, LocalMax.Y, LocalMax.Z);
+	OriginalAABB[7] = FVector(LocalMax.X, LocalMax.Y, LocalMax.Z);
+
 }
 
 void AGizmoTranslate::Tick(float TickTime) {
@@ -33,37 +44,62 @@ void AGizmoTranslate::Destroy() {
 	AGizmoBase::Destroy();
 }
 
-void AGizmoTranslate::OnDragTick(FVector2 PointNDC, FVector2 DeltaNDC)
+void AGizmoTranslate::OnDragTick(FVector2 PosNDC, FVector2 DeltaNDC, const FMatrix& ViewProj, FVector Axis, AActor* Target)
 {
-	//const float sensitive = 20.f;
-	//FVector orgDir;
-	//switch(axis) {
-	//case EAxis::X:
-	//	orgDir = FVector(1, 0, 0);
-	//	break;
-	//case EAxis::Y:
-	//	orgDir = FVector(0, 1, 0);
-	//	break;
-	//case EAxis::Z:
-	//	orgDir = FVector(0, 0, 1);
-	//	break;
-	//}
-	//
-	//FMatrix view = UEngine::GetEngine().GetWorld()->GetViewMatrix();
-	//FMatrix proj = UEngine::GetEngine().GetWorld()->GetProjectionMatrix();
-	//FVector directionInScreen = (mat * view * proj).TransformDirectionVector(orgDir);
-	//float dx = dmx / static_cast<float>(UEngine::GetEngine().GetWindowInfo().Width);
-	//float dy = - dmy / static_cast<float>(UEngine::GetEngine().GetWindowInfo().Height);
-	//float movement = FVector(dx, dy, 0).Dot(directionInScreen);
-	///*OutputDebugString((
-	//	L"(" + std::to_wstring(directionInScreen.GetSafeNormal().X) +
-	//	L"," + std::to_wstring(directionInScreen.GetSafeNormal().Y) +
-	//	L"," + std::to_wstring(directionInScreen.GetSafeNormal().Z) + L")\n"
-	//).c_str());*/
-	//FVector newPos = mat.TransformDirectionVector(orgDir) * movement * sensitive + Target->GetActorLocation();
-	//Target->SetActorLocation(newPos);
+	static const float Sensitivity = 1.f;
+	FVector AxisOnScreen = ViewProj.TransformDirectionVector(Axis);
+	AxisOnScreen.Z = 0;
+	float DispAmt = -FVector(DeltaNDC.X, DeltaNDC.Y, 0.f).Dot(AxisOnScreen.GetSafeNormal());
+	FVector Disp = Axis * DispAmt * Sensitivity;
+	
+	if (isnan(Disp.X) || isnan(Disp.Y) || isnan(Disp.Z))
+		return;
+
+	FVector Loc = Target->GetActorLocation();
+	Loc += Disp;
+	Target->SetActorLocation(Loc);
 }
 
-bool AGizmoTranslate::Intersects(FRay ray, float& hitDistance) {
-	return Geometry::IsRayIntersectAABB(GetAABB(), ray, hitDistance);
+bool AGizmoTranslate::Intersects(FRay ray, FVector& Axis, float& hitDistance) {
+	FMatrix World = RootComponent->GetWorldMatrix();
+	FMatrix Inv = (FMatrix(FRotator(0, 0, 0)) * World).Inverse();
+
+	FVector origin, direction;
+	origin = Inv.TransformPositionVector(ray.Origin);
+	direction = Inv.TransformDirectionVector(ray.Direction);
+
+	FRay RayLocal = { origin, direction };
+
+	if (Geometry::IsRayIntersectAABB(FBoundingBox(LocalMin, LocalMax), RayLocal, hitDistance))
+	{
+		Axis = (FMatrix(FRotator(0, 0, 0)) * World).TransformDirectionVector(FVector(1, 0, 0));
+		return true;
+	}
+
+	Inv = (FMatrix(FRotator(0, 90, 0)) * World).Inverse();
+
+	origin = Inv.TransformPositionVector(ray.Origin);
+	direction = Inv.TransformDirectionVector(ray.Direction);
+
+	RayLocal = { origin, direction };
+
+	if (Geometry::IsRayIntersectAABB(FBoundingBox(LocalMin, LocalMax), RayLocal, hitDistance))
+	{
+		Axis = (FMatrix(FRotator(0, 90, 0)) * World).TransformDirectionVector(FVector(1, 0, 0));
+		return true;
+	}
+
+	Inv = (FMatrix(FRotator(90, 0, 0)) * World).Inverse();
+
+	origin = Inv.TransformPositionVector(ray.Origin);
+	direction = Inv.TransformDirectionVector(ray.Direction);
+
+	RayLocal = { origin, direction };
+
+	if (Geometry::IsRayIntersectAABB(FBoundingBox(LocalMin, LocalMax), RayLocal, hitDistance))
+	{
+		Axis = (FMatrix(FRotator(90, 0, 0)) * World).TransformDirectionVector(FVector(1, 0, 0));
+		return true;
+	}
+	return false;
 }

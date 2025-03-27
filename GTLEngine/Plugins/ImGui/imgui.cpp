@@ -210,7 +210,7 @@ CODE
  - Dear ImGui is a "single pass" rasterizing implementation of the IMGUI paradigm, aimed at ease of use and high-performances.
    For every application frame, your UI code will be called only once. This is in contrast to e.g. Unity's implementation of an IMGUI,
    where the UI code is called multiple times ("multiple passes") from a single entry point. There are pros and cons to both approaches.
- - Our origin is on the top-left. In axis aligned bounding boxes, Min = top-left, Max = bottom-right.
+ - Our origin is on the top-left. In axis aligned bounding boxes, LocalMin = top-left, LocalMax = bottom-right.
  - Please make sure you have asserts enabled (IM_ASSERT redirects to assert() by default, but can be redirected).
    If you get an assert, read the messages and comments around the assert.
  - This codebase aims to be highly optimized:
@@ -407,7 +407,7 @@ CODE
                  //   - In a single viewport application, draw_data->DisplayPos == (0,0) and draw_data->DisplaySize == io.DisplaySize, but always use GetMainViewport()->Pos/Size instead of hardcoding those values.
                  //   - In the interest of supporting multi-viewport applications (see 'docking' branch on github),
                  //     always subtract draw_data->DisplayPos from clipping bounds to convert them to your viewport space.
-                 // - Note that pcmd->ClipRect contains Min+Max bounds. Some graphics API may use Min+Max, other may use Min+Size (size being Max-Min)
+                 // - Note that pcmd->ClipRect contains LocalMin+LocalMax bounds. Some graphics API may use LocalMin+LocalMax, other may use LocalMin+Size (size being LocalMax-LocalMin)
                  MyEngineSetScissor(clip_min.x, clip_min.y, clip_max.x, clip_max.y);
 
                  // The texture for the draw call is specified by pcmd->GetTexID().
@@ -439,7 +439,7 @@ CODE
                             - TL;DR: 'border_col' had misleading side-effect on layout, 'bg_col' was missing, parameter order couldn't be consistent with ImageButton().
                             - new behavior always use ImGuiCol_Border color + style.ImageBorderSize / ImGuiStyleVar_ImageBorderSize.
                             - old behavior altered border size (and therefore layout) based on border color's alpha, which caused variety of problems + old behavior a fixed 1.0f for border size which was not tweakable.
-                            - kept legacy signature (will obsolete), which mimics the old behavior,  but uses Max(1.0f, style.ImageBorderSize) when border_col is specified.
+                            - kept legacy signature (will obsolete), which mimics the old behavior,  but uses LocalMax(1.0f, style.ImageBorderSize) when border_col is specified.
                             - added ImageWithBg() function which has both 'bg_col' (which was missing) and 'tint_col'. It was impossible to add 'bg_col' to Image() with a parameter order consistent with other functions, so we decided to remove 'tint_col' and introduce ImageWithBg().
  - 2025/02/06 (1.91.9) - renamed ImFontConfig::GlyphExtraSpacing.x to ImFontConfig::GlyphExtraAdvanceX.
  - 2025/01/22 (1.91.8) - removed ImGuiColorEditFlags_AlphaPreview (made value 0): it is now the default behavior.
@@ -2395,7 +2395,7 @@ int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* 
     int wanted = len + (len ? 0 : 1);
 
     if (in_text_end == NULL)
-        in_text_end = in_text + wanted; // Max length, nulls will be taken into account.
+        in_text_end = in_text + wanted; // LocalMax length, nulls will be taken into account.
 
     // Copy at most 'len' bytes, stop copying at 0 or past in_text_end. Branch predictor does a good job here,
     // so it is fast even with excessive branching.
@@ -3239,7 +3239,7 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
         }
 
         // Convert position ranges to item index ranges
-        // - Very important: when a starting position is after our maximum item, we set Min to (ItemsCount - 1). This allows us to handle most forms of wrapping.
+        // - Very important: when a starting position is after our maximum item, we set LocalMin to (ItemsCount - 1). This allows us to handle most forms of wrapping.
         // - Due to how Selectable extra padding they tend to be "unaligned" with exact unit in the item list,
         //   which with the flooring/ceiling tend to lead to 2 items instead of one being submitted.
         for (ImGuiListClipperRange& range : data->Ranges)
@@ -4758,7 +4758,7 @@ float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
         // We could decide to setup a default wrapping max point for auto-resizing windows,
         // or have auto-wrap (with unspecified wrapping pos) behave as a ContentSize extending function?
         //if (window->Hidden && (window->Flags & ImGuiWindowFlags_AlwaysAutoResize))
-        //    wrap_pos_x = ImMax(window->WorkRect.Min.x + g.FontSize * 10.0f, window->WorkRect.Max.x);
+        //    wrap_pos_x = ImMax(window->WorkRect.LocalMin.x + g.FontSize * 10.0f, window->WorkRect.LocalMax.x);
         //else
         wrap_pos_x = window->WorkRect.Max.x;
     }
@@ -6555,7 +6555,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& si
         ImGuiID resize_grip_id = window->GetID(resize_grip_n); // == GetWindowResizeCornerID()
         ItemAdd(resize_rect, resize_grip_id, NULL, ImGuiItemFlags_NoNav);
         ButtonBehavior(resize_rect, resize_grip_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_NoNavFocus);
-        //GetForegroundDrawList(window)->AddRect(resize_rect.Min, resize_rect.Max, IM_COL32(255, 255, 0, 255));
+        //GetForegroundDrawList(window)->AddRect(resize_rect.LocalMin, resize_rect.LocalMax, IM_COL32(255, 255, 0, 255));
         if (hovered || held)
             SetMouseCursor((resize_grip_n & 1) ? ImGuiMouseCursor_ResizeNESW : ImGuiMouseCursor_ResizeNWSE);
 
@@ -6599,7 +6599,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& si
         ImGuiID border_id = window->GetID(border_n + 4); // == GetWindowResizeBorderID()
         ItemAdd(border_rect, border_id, NULL, ImGuiItemFlags_NoNav);
         ButtonBehavior(border_rect, border_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_NoNavFocus);
-        //GetForegroundDrawList(window)->AddRect(border_rect.Min, border_rect.Max, IM_COL32(255, 255, 0, 255));
+        //GetForegroundDrawList(window)->AddRect(border_rect.LocalMin, border_rect.LocalMax, IM_COL32(255, 255, 0, 255));
         if (hovered && g.HoveredIdTimer <= WINDOWS_RESIZE_FROM_EDGES_FEEDBACK_TIMER)
             hovered = false;
         if (hovered || held)
@@ -6692,7 +6692,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& si
             const float NAV_RESIZE_SPEED = 600.0f;
             const float resize_step = NAV_RESIZE_SPEED * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y);
             g.NavWindowingAccumDeltaSize += nav_resize_dir * resize_step;
-            g.NavWindowingAccumDeltaSize = ImMax(g.NavWindowingAccumDeltaSize, clamp_rect.Min - window->Pos - window->Size); // We need Pos+Size >= clmap_rect.Min, so Size >= clmap_rect.Min - Pos, so size_delta >= clmap_rect.Min - window->Pos - window->Size
+            g.NavWindowingAccumDeltaSize = ImMax(g.NavWindowingAccumDeltaSize, clamp_rect.Min - window->Pos - window->Size); // We need Pos+Size >= clmap_rect.LocalMin, so Size >= clmap_rect.LocalMin - Pos, so size_delta >= clmap_rect.LocalMin - window->Pos - window->Size
             g.NavWindowingToggleLayer = false;
             g.NavHighlightItemUnderNav = true;
             resize_grip_col[0] = GetColorU32(ImGuiCol_ResizeGripActive);
@@ -6949,8 +6949,8 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
             clip_r.Max.x = ImMin(clip_r.Max.x, marker_pos.x - (int)(marker_size_x * 0.5f));
         }
     }
-    //if (g.IO.KeyShift) window->DrawList->AddRect(layout_r.Min, layout_r.Max, IM_COL32(255, 128, 0, 255)); // [DEBUG]
-    //if (g.IO.KeyCtrl) window->DrawList->AddRect(clip_r.Min, clip_r.Max, IM_COL32(255, 128, 0, 255)); // [DEBUG]
+    //if (g.IO.KeyShift) window->DrawList->AddRect(layout_r.LocalMin, layout_r.LocalMax, IM_COL32(255, 128, 0, 255)); // [DEBUG]
+    //if (g.IO.KeyCtrl) window->DrawList->AddRect(clip_r.LocalMin, clip_r.LocalMax, IM_COL32(255, 128, 0, 255)); // [DEBUG]
     RenderTextClipped(layout_r.Min, layout_r.Max, name, NULL, &text_size, style.WindowTitleAlign, &clip_r);
 }
 
@@ -7586,7 +7586,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->ParentWorkRect = window->WorkRect;
 
         // [LEGACY] Content Region
-        // FIXME-OBSOLETE: window->ContentRegionRect.Max is currently very misleading / partly faulty, but some BeginChild() patterns relies on it.
+        // FIXME-OBSOLETE: window->ContentRegionRect.LocalMax is currently very misleading / partly faulty, but some BeginChild() patterns relies on it.
         // Unless explicit content size is specified by user, this currently represent the region leading to no scrolling.
         // Used by:
         // - Mouse wheel scrolling + many other things
@@ -10625,9 +10625,9 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
         // READ THE FAQ: https://dearimgui.com/faq
         IM_ASSERT(id != window->ID && "Cannot have an empty ID at the root of a window. If you need an empty label, use ## and read the FAQ about how the ID Stack works!");
     }
-    //if (g.IO.KeyAlt) window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255,255,0,120)); // [DEBUG]
+    //if (g.IO.KeyAlt) window->DrawList->AddRect(bb.LocalMin, bb.LocalMax, IM_COL32(255,255,0,120)); // [DEBUG]
     //if ((g.LastItemData.ItemFlags & ImGuiItemFlags_NoNav) == 0)
-    //    window->DrawList->AddRect(g.LastItemData.NavRect.Min, g.LastItemData.NavRect.Max, IM_COL32(255,255,0,255)); // [DEBUG]
+    //    window->DrawList->AddRect(g.LastItemData.NavRect.LocalMin, g.LastItemData.NavRect.LocalMax, IM_COL32(255,255,0,255)); // [DEBUG]
 #endif
 
     if (id != 0 && g.DeactivatedItemData.ID == id)
@@ -11015,7 +11015,7 @@ void ImGui::EndGroup()
     if (window->DC.IsSetPos)
         ErrorCheckUsingSetCursorPosToExtendParentBoundaries();
 
-    // Include LastItemData.Rect.Max as a workaround for e.g. EndTable() undershooting with CursorMaxPos report. (#7543)
+    // Include LastItemData.Rect.LocalMax as a workaround for e.g. EndTable() undershooting with CursorMaxPos report. (#7543)
     ImRect group_bb(group_data.BackupCursorPos, ImMax(ImMax(window->DC.CursorMaxPos, g.LastItemData.Rect.Max), group_data.BackupCursorPos));
     window->DC.CursorPos = group_data.BackupCursorPos;
     window->DC.CursorPosPrevLine = group_data.BackupCursorPosPrevLine;
@@ -11131,8 +11131,8 @@ ImVec2 ImGui::ScrollToRectEx(ImGuiWindow* window, const ImRect& item_rect, ImGui
     ImRect scroll_rect(window->InnerRect.Min - ImVec2(1, 1), window->InnerRect.Max + ImVec2(1, 1));
     scroll_rect.Min.x = ImMin(scroll_rect.Min.x + window->DecoInnerSizeX1, scroll_rect.Max.x);
     scroll_rect.Min.y = ImMin(scroll_rect.Min.y + window->DecoInnerSizeY1, scroll_rect.Max.y);
-    //GetForegroundDrawList(window)->AddRect(item_rect.Min, item_rect.Max, IM_COL32(255,0,0,255), 0.0f, 0, 5.0f); // [DEBUG]
-    //GetForegroundDrawList(window)->AddRect(scroll_rect.Min, scroll_rect.Max, IM_COL32_WHITE); // [DEBUG]
+    //GetForegroundDrawList(window)->AddRect(item_rect.LocalMin, item_rect.LocalMax, IM_COL32(255,0,0,255), 0.0f, 0, 5.0f); // [DEBUG]
+    //GetForegroundDrawList(window)->AddRect(scroll_rect.LocalMin, scroll_rect.LocalMax, IM_COL32_WHITE); // [DEBUG]
 
     // Check that only one behavior is selected per axis
     IM_ASSERT((flags & ImGuiScrollFlags_MaskX_) == 0 || ImIsPowerOfTwo(flags & ImGuiScrollFlags_MaskX_));
@@ -11897,8 +11897,8 @@ bool ImGui::BeginPopupContextVoid(const char* str_id, ImGuiPopupFlags popup_flag
 ImVec2 ImGui::FindBestWindowPosForPopupEx(const ImVec2& ref_pos, const ImVec2& size, ImGuiDir* last_dir, const ImRect& r_outer, const ImRect& r_avoid, ImGuiPopupPositionPolicy policy)
 {
     ImVec2 base_pos_clamped = ImClamp(ref_pos, r_outer.Min, r_outer.Max - size);
-    //GetForegroundDrawList()->AddRect(r_avoid.Min, r_avoid.Max, IM_COL32(255,0,0,255));
-    //GetForegroundDrawList()->AddRect(r_outer.Min, r_outer.Max, IM_COL32(0,255,0,255));
+    //GetForegroundDrawList()->AddRect(r_avoid.LocalMin, r_avoid.LocalMax, IM_COL32(255,0,0,255));
+    //GetForegroundDrawList()->AddRect(r_outer.LocalMin, r_outer.LocalMax, IM_COL32(0,255,0,255));
 
     // Combo Box policy (we want a connecting edge)
     if (policy == ImGuiPopupPositionPolicy_ComboBox)
@@ -12027,7 +12027,7 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
             r_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 16, ref_pos.y + 8);
         else
             r_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 24 * scale, ref_pos.y + 24 * scale); // FIXME: Hard-coded based on mouse cursor shape expectation. Exact dimension not very important.
-        //GetForegroundDrawList()->AddRect(r_avoid.Min, r_avoid.Max, IM_COL32(255, 0, 255, 255));
+        //GetForegroundDrawList()->AddRect(r_avoid.LocalMin, r_avoid.LocalMax, IM_COL32(255, 0, 255, 255));
 
         return FindBestWindowPosForPopupEx(tooltip_pos, window->Size, &window->AutoPosLastDirection, r_outer, r_avoid, ImGuiPopupPositionPolicy_Tooltip);
     }
@@ -12423,7 +12423,7 @@ static bool ImGui::NavScoreItem(ImGuiNavItemData* result)
 
     // FIXME: Those are not good variables names
     ImRect cand = g.LastItemData.NavRect;   // Current item nav rectangle
-    const ImRect curr = g.NavScoringRect;   // Current modified source rect (NB: we've applied Max.x = Min.x in NavUpdate() to inhibit the effect of having varied item width)
+    const ImRect curr = g.NavScoringRect;   // Current modified source rect (NB: we've applied LocalMax.x = LocalMin.x in NavUpdate() to inhibit the effect of having varied item width)
     g.NavScoringDebugCount++;
 
     // When entering through a NavFlattened border, we consider child window items as fully clipped for scoring
@@ -12454,7 +12454,7 @@ static bool ImGui::NavScoreItem(ImGuiNavItemData* result)
     if (dbx != 0.0f || dby != 0.0f)
     {
         // For non-overlapping boxes, use distance between boxes
-        // FIXME-NAV: Quadrant may be incorrect because of (1) dbx bias and (2) curr.Max.y bias applied by NavBiasScoringRect() where typically curr.Max.y==curr.Min.y
+        // FIXME-NAV: Quadrant may be incorrect because of (1) dbx bias and (2) curr.LocalMax.y bias applied by NavBiasScoringRect() where typically curr.LocalMax.y==curr.LocalMin.y
         // One typical case where this happens, with style.WindowMenuButtonPosition == ImGuiDir_Right, pressing Left to navigate from Close to Collapse tends to fail.
         // Also see #6344. Calling ImGetDirQuadrantFromDelta() with unbiased values may be good but side-effects are plenty.
         dax = dbx;
@@ -13304,8 +13304,8 @@ void ImGui::NavUpdateCreateMoveRequest()
         if (g.NavMoveSubmitted)
             NavBiasScoringRect(scoring_rect, window->RootWindowForNav->NavPreferredScoringPosRel[g.NavLayer], g.NavMoveDir, g.NavMoveFlags);
         IM_ASSERT(!scoring_rect.IsInverted()); // Ensure we have a non-inverted bounding box here will allow us to remove extraneous ImFabs() calls in NavScoreItem().
-        //GetForegroundDrawList()->AddRect(scoring_rect.Min, scoring_rect.Max, IM_COL32(255,200,0,255)); // [DEBUG]
-        //if (!g.NavScoringNoClipRect.IsInverted()) { GetForegroundDrawList()->AddRect(g.NavScoringNoClipRect.Min, g.NavScoringNoClipRect.Max, IM_COL32(255, 200, 0, 255)); } // [DEBUG]
+        //GetForegroundDrawList()->AddRect(scoring_rect.LocalMin, scoring_rect.LocalMax, IM_COL32(255,200,0,255)); // [DEBUG]
+        //if (!g.NavScoringNoClipRect.IsInverted()) { GetForegroundDrawList()->AddRect(g.NavScoringNoClipRect.LocalMin, g.NavScoringNoClipRect.LocalMax, IM_COL32(255, 200, 0, 255)); } // [DEBUG]
     }
     g.NavScoringRect = scoring_rect;
     g.NavScoringNoClipRect.Add(scoring_rect);

@@ -41,13 +41,12 @@ public:
 	virtual void Destroy() override;
 
 	virtual void OnClick(int mx, int my) {}
-	virtual void OnDragTick(FVector2 PointNDC, FVector2 DeltaNDC) {}
+	virtual void OnDragTick(FVector2 PosNDC, FVector2 DeltaNDC, const FMatrix& ViewProj, FVector Axis, AActor* Target) {}
 	virtual void OnRelease(int mx, int my) {}
-
 
 	virtual FBoundingBox GetAABB() const;
 
-	virtual bool Intersects(FRay ray, float& hitDistance) { return false; };
+	virtual bool Intersects(FRay ray, FVector& Axis, float& hitDistance) { return false; };
 	EGizmoViewType GetGizmoViewType() const { return GizmoViewType; }
 	AActor* GetTargetActor() { return Target; }
 	EGizmoModeIndex GizmoMode;

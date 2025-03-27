@@ -63,6 +63,7 @@ public:
 	const FMatrix& GetViewMatrix() const { return Camera->CachedViewMatrix; }
 	FViewportCamera* GetCamera() const { return Camera; }
 	FRay GetRayOnWorld(int InClientMouseX, int InClientMouseY);
+	FVector2 GetCursorOnNDC(int InClientMouseX, int InClientMouseY);
 
 	bool Contains(int x, int y) const;
 	bool bIsResized = false;

@@ -84,11 +84,12 @@ void FEditorManager::Tick(float DeltaTime)
 	HoveredViewport->TickWhenHovered(DeltaTime);
 
 	GizmoManager->Tick(DeltaTime);
-	GizmoManager->ProcessPicking(GetRayOnWorld());
-	
-	TObjectIterator<AStaticMeshActor> it;
-	if(it)
-		GizmoManager->AttachTo(*it);
+	GizmoManager->SetSelected(SelectedActor);
+	SelectedActor = GizmoManager->CastRayAndPick(GetRayOnWorld());
+	GizmoManager->AttachTo(SelectedActor);
+	FVector2 ClientMouse = HoveredViewport->GetCursorOnNDC(InputManager->GetMouseClientX(), InputManager->GetMouseClientY());
+	FVector2 ClientMouseDelta = FVector2(InputManager->GetMouseDeltaX() / -HoveredViewport->GetViewport().Width, InputManager->GetMouseDeltaY() / HoveredViewport->GetViewport().Height);
+	GizmoManager->OnDrag(ClientMouse, ClientMouseDelta, HoveredViewport->GetViewMatrix() * HoveredViewport->GetProjectionMatrix());
 
 	for (FViewport& Viewport : Viewports)
 	{

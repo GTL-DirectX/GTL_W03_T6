@@ -1540,14 +1540,14 @@ enum ImGuiInputFlagsPrivate_
 // [SECTION] Clipper support
 //-----------------------------------------------------------------------------
 
-// Note that Max is exclusive, so perhaps should be using a Begin/End convention.
+// Note that LocalMax is exclusive, so perhaps should be using a Begin/End convention.
 struct ImGuiListClipperRange
 {
     int     Min;
     int     Max;
     bool    PosToIndexConvert;      // Begin/End are absolute position (will be converted to indices later)
-    ImS8    PosToIndexOffsetMin;    // Add to Min after converting to indices
-    ImS8    PosToIndexOffsetMax;    // Add to Min after converting to indices
+    ImS8    PosToIndexOffsetMin;    // Add to LocalMin after converting to indices
+    ImS8    PosToIndexOffsetMax;    // Add to LocalMin after converting to indices
 
     static ImGuiListClipperRange    FromIndices(int min, int max)                               { ImGuiListClipperRange r = { min, max, false, 0, 0 }; return r; }
     static ImGuiListClipperRange    FromPositions(float y1, float y2, int off_min, int off_max) { ImGuiListClipperRange r = { (int)y1, (int)y2, true, (ImS8)off_min, (ImS8)off_max }; return r; }
@@ -1742,7 +1742,7 @@ struct ImGuiOldColumns
     bool                IsBeingResized;
     int                 Current;
     int                 Count;
-    float               OffMinX, OffMaxX;       // Offsets from HostWorkRect.Min.x
+    float               OffMinX, OffMaxX;       // Offsets from HostWorkRect.LocalMin.x
     float               LineMinY, LineMaxY;
     float               HostCursorPosY;         // Backup of CursorPos at the time of BeginColumns()
     float               HostCursorMaxPosX;      // Backup of CursorMaxPos at the time of BeginColumns()
@@ -2846,8 +2846,8 @@ struct IMGUI_API ImGuiTable
     float                       RefScale;                   // Reference scale to be able to rescale columns on font/dpi changes.
     float                       AngledHeadersHeight;        // Set by TableAngledHeadersRow(), used in TableUpdateLayout()
     float                       AngledHeadersSlope;         // Set by TableAngledHeadersRow(), used in TableUpdateLayout()
-    ImRect                      OuterRect;                  // Note: for non-scrolling table, OuterRect.Max.y is often FLT_MAX until EndTable(), unless a height has been specified in BeginTable().
-    ImRect                      InnerRect;                  // InnerRect but without decoration. As with OuterRect, for non-scrolling tables, InnerRect.Max.y is
+    ImRect                      OuterRect;                  // Note: for non-scrolling table, OuterRect.LocalMax.y is often FLT_MAX until EndTable(), unless a height has been specified in BeginTable().
+    ImRect                      InnerRect;                  // InnerRect but without decoration. As with OuterRect, for non-scrolling tables, InnerRect.LocalMax.y is
     ImRect                      WorkRect;
     ImRect                      InnerClipRect;
     ImRect                      BgClipRect;                 // We use this to cpu-clip cell background color fill, evolve during the frame as we cross frozen rows boundaries
@@ -3111,7 +3111,7 @@ namespace ImGui
 
     // Basic Helpers for widget code
     IMGUI_API void          ItemSize(const ImVec2& size, float text_baseline_y = -1.0f);
-    inline void             ItemSize(const ImRect& bb, float text_baseline_y = -1.0f) { ItemSize(bb.GetSize(), text_baseline_y); } // FIXME: This is a misleading API since we expect CursorPos to be bb.Min.
+    inline void             ItemSize(const ImRect& bb, float text_baseline_y = -1.0f) { ItemSize(bb.GetSize(), text_baseline_y); } // FIXME: This is a misleading API since we expect CursorPos to be bb.LocalMin.
     IMGUI_API bool          ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb = NULL, ImGuiItemFlags extra_flags = 0);
     IMGUI_API bool          ItemHoverable(const ImRect& bb, ImGuiID id, ImGuiItemFlags item_flags);
     IMGUI_API bool          IsWindowContentHoverable(ImGuiWindow* window, ImGuiHoveredFlags flags = 0);

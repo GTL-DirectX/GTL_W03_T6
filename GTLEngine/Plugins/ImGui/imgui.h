@@ -587,7 +587,7 @@ namespace ImGui
     //   the array syntax is just a way to document the number of elements that are expected to be accessible. You can pass address of your first element out of a contiguous set, e.g. &myvector.x
     // - Adjust format string to decorate the value with a prefix, a suffix, or adapt the editing and display precision e.g. "%.3f" -> 1.234; "%5.2f secs" -> 01.23 secs; "Biscuit: %.0f" -> Biscuit: 1; etc.
     // - Format string may also be set to NULL or use the default format ("%f" or "%d").
-    // - Speed are per-pixel of mouse movement (v_speed=0.2f: mouse needs to move by 5 pixels to increase value by 1). For keyboard/gamepad navigation, minimum speed is Max(v_speed, minimum_step_at_given_precision).
+    // - Speed are per-pixel of mouse movement (v_speed=0.2f: mouse needs to move by 5 pixels to increase value by 1). For keyboard/gamepad navigation, minimum speed is LocalMax(v_speed, minimum_step_at_given_precision).
     // - Use v_min < v_max to clamp edits to given limits. Note that CTRL+Click manual input can override those limits if ImGuiSliderFlags_AlwaysClamp is not used.
     // - Use v_max = FLT_MAX / INT_MAX etc to avoid clamping to a maximum, same with v_min = -FLT_MAX / INT_MIN to avoid clamping to a minimum.
     // - We use the same sets of flags for DragXXX() and SliderXXX() functions as the features are the same and it makes it easier to swap them.
@@ -1269,9 +1269,9 @@ enum ImGuiComboFlags_
 {
     ImGuiComboFlags_None                    = 0,
     ImGuiComboFlags_PopupAlignLeft          = 1 << 0,   // Align the popup toward the left by default
-    ImGuiComboFlags_HeightSmall             = 1 << 1,   // Max ~4 items visible. Tip: If you want your combo popup to be a specific size you can use SetNextWindowSizeConstraints() prior to calling BeginCombo()
-    ImGuiComboFlags_HeightRegular           = 1 << 2,   // Max ~8 items visible (default)
-    ImGuiComboFlags_HeightLarge             = 1 << 3,   // Max ~20 items visible
+    ImGuiComboFlags_HeightSmall             = 1 << 1,   // LocalMax ~4 items visible. Tip: If you want your combo popup to be a specific size you can use SetNextWindowSizeConstraints() prior to calling BeginCombo()
+    ImGuiComboFlags_HeightRegular           = 1 << 2,   // LocalMax ~8 items visible (default)
+    ImGuiComboFlags_HeightLarge             = 1 << 3,   // LocalMax ~20 items visible
     ImGuiComboFlags_HeightLargest           = 1 << 4,   // As many fitting items as possible
     ImGuiComboFlags_NoArrowButton           = 1 << 5,   // Display on the preview box without the square arrow button
     ImGuiComboFlags_NoPreview               = 1 << 6,   // Display only a square arrow button
@@ -3276,7 +3276,7 @@ struct ImFontConfig
     //ImVec2        GlyphExtraSpacing;      // 0, 0     // (REMOVED IN 1.91.9: use GlyphExtraAdvanceX)
     ImVec2          GlyphOffset;            // 0, 0     // Offset all glyphs from this font input.
     const ImWchar*  GlyphRanges;            // NULL     // THE ARRAY DATA NEEDS TO PERSIST AS LONG AS THE FONT IS ALIVE. Pointer to a user-provided list of Unicode range (2 value per range, values are inclusive, zero-terminated list).
-    float           GlyphMinAdvanceX;       // 0        // Minimum AdvanceX for glyphs, set Min to align font icons, set both Min/Max to enforce mono-space font
+    float           GlyphMinAdvanceX;       // 0        // Minimum AdvanceX for glyphs, set LocalMin to align font icons, set both LocalMin/LocalMax to enforce mono-space font
     float           GlyphMaxAdvanceX;       // FLT_MAX  // Maximum AdvanceX for glyphs
     float           GlyphExtraAdvanceX;     // 0        // Extra spacing (in pixels) between glyphs. Please contact us if you are using this.
     unsigned int    FontBuilderFlags;       // 0        // Settings for custom font builder. THIS IS BUILDER IMPLEMENTATION DEPENDENT. Leave as zero if unsure.

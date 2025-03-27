@@ -21,17 +21,20 @@ public:
 
 	void Tick(float DeltaTime);
 	void Destroy();
-	AGizmoBase* GetGizmoActor() { return GizmoOnDrag; }
+	AGizmoBase* GetGizmoActor() { return CurrentGizmo; }
 	void AttachTo(AActor* Target) { SelectedActor = Target; }
-	void ProcessPicking(FRay Ray);
+	AActor* CastRayAndPick(FRay Ray);
+	void OnDrag(FVector2 PosNDC, FVector2 DeltaNDC, const FMatrix& ViewProj);
+
 
 private:
 	EGizmoModeIndex GizmoMode = EGizmoModeIndex::GMI_GizmoTranslate;
 
 private:
 	AActor* SelectedActor = nullptr;
-	AGizmoBase* GizmoOnDrag = nullptr;
-	//TArray<AGizmoBase*> Gizmos;
+	AGizmoBase* CurrentGizmo = nullptr;
+	bool IsGizmoDragged = false;
+	FVector AxisOnDrag = FVector(0,0,0);
 	AGizmoTranslate* GizmoTranslate = nullptr;
 	AGizmoRotate* GizmoRotate = nullptr;
 	AGizmoScale* GizmoScale = nullptr;
